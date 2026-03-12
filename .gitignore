@@ -15,5 +15,6 @@ assets/models/
 /.coverage
 /assets/campaign/campaign_objective.txt
 /assets/campaign/product_docs.txt
+tmp_cookies.json
 /venv/
 /linkedin/management/commands/export_model.py

@@ -133,13 +133,24 @@ def start_browser_session(session: "AccountSession", handle: str):
         session.context.storage_state(path=str(state_file))
         logger.info(colored("Login successful – session saved", "green", attrs=["bold"]) + f" → {state_file}")
     else:
-        goto_page(
-            session,
-            action=lambda: session.page.goto(LINKEDIN_FEED_URL),
-            expected_url_pattern="/feed",
-            timeout=30_000,
-            error_message="Saved session invalid",
-        )
+        try:
+            goto_page(
+                session,
+                action=lambda: session.page.goto(LINKEDIN_FEED_URL),
+                expected_url_pattern="/feed",
+                timeout=30_000,
+                error_message="Saved session invalid",
+            )
+        except RuntimeError:
+            # Cookies expired or invalid – fall back to email/password login
+            logger.warning("Saved session invalid or expired – re-authenticating via login")
+            session.context.close()
+            session.browser.close()
+            session.playwright.stop()
+            session.page = session.context = session.browser = session.playwright = None
+            state_file.unlink(missing_ok=True)
+            start_browser_session(session, handle)
+            return
 
     session.page.wait_for_load_state("load")
     logger.info(colored("Browser ready", "green", attrs=["bold"]))
