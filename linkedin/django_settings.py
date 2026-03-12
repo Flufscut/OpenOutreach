@@ -31,6 +31,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+# CSRF: when behind Railway/proxy, requests come with Origin header from public URL.
+# Django rejects POST if origin not in CSRF_TRUSTED_ORIGINS.
+if os.environ.get("RAILWAY") or os.environ.get("RAILWAY_PUBLIC_DOMAIN"):
+    domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip() or "openoutreach-production.up.railway.app"
+    CSRF_TRUSTED_ORIGINS = [f"https://{domain}", f"http://{domain}"]
+
 INSTALLED_APPS = [
     "django.contrib.sites",
     "django.contrib.admin",
