@@ -30,6 +30,7 @@ fi
 # Run Django migrations and bootstrap CRM data
 python manage.py migrate --no-input
 python manage.py setup_crm
+python manage.py ensure_superuser
 
 # If PORT is set (e.g. Railway), start Django runserver in background for CRM Admin
 if [ -n "$PORT" ]; then

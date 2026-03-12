@@ -39,6 +39,9 @@ OpenOutreach can be deployed to [Railway](https://railway.app) for a managed, al
    | `CONNECT_WEEKLY_LIMIT` | No | Default: 100 |
    | `FOLLOW_UP_DAILY_LIMIT` | No | Default: 30 |
    | `SUBSCRIBE_NEWSLETTER` | No | Default: true |
+   | `DJANGO_SUPERUSER_USERNAME` | No | Admin username (creates superuser on deploy) |
+   | `DJANGO_SUPERUSER_EMAIL` | No | Admin email (required if creating superuser) |
+   | `DJANGO_SUPERUSER_PASSWORD` | No | Admin password (required if creating superuser) |
 
 5. **Deploy** — Railway auto-deploys on push. Add a domain for Django Admin access.
 
@@ -58,7 +61,7 @@ When `PORT` is set (Railway does this automatically), the start script runs Djan
 - **Django Admin**: `https://your-app.railway.app/admin/`
 - **CRM UI**: `https://your-app.railway.app/crm/`
 
-Create a superuser via Railway's shell: `python manage.py createsuperuser`
+**Create a superuser** — Set `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, and `DJANGO_SUPERUSER_PASSWORD` in Railway Variables. The `ensure_superuser` command runs on every deploy and creates/updates the admin user. Alternatively, use Railway's shell: `python manage.py createsuperuser`
 
 ## VNC (Optional)
 

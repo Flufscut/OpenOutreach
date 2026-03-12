@@ -41,7 +41,8 @@ make setup                           # install deps + Playwright browsers + migr
 make run                             # run the daemon (interactive onboarding on first run)
 make admin                           # Django Admin at http://localhost:8000/admin/
 python manage.py migrate             # run Django migrations
-python manage.py createsuperuser     # create Django admin user
+python manage.py createsuperuser     # create Django admin user (interactive)
+python manage.py ensure_superuser    # create/update superuser from DJANGO_SUPERUSER_* env vars (Railway)
 ```
 
 ### Testing
