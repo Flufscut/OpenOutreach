@@ -18,6 +18,7 @@ OpenOutreach can be deployed to [Railway](https://railway.app) for a managed, al
 3. **Add a volume** for persistent storage:
    - Mount path: `/app/assets`
    - This persists SQLite DB, cookies, and ML models across deployments.
+   - Set `RAILWAY_RUN_UID=0` so the container can write to the volume.
 
 4. **Set required environment variables** (Railway Variables tab):
 
