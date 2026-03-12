@@ -58,6 +58,7 @@ When the workflow pushes to your fork, Railway redeploys automatically.
 
 When `PORT` is set (Railway does this automatically), the start script runs Django's development server in the background. Access:
 
+- **Landing page**: `https://your-app.railway.app/` (choose CRM or Django Admin)
 - **Django Admin**: `https://your-app.railway.app/admin/`
 - **CRM UI**: `https://your-app.railway.app/crm/`
 
