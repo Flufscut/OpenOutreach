@@ -8,15 +8,21 @@ from django.db import migrations
 # SHA-256 of the old followup2.j2 (before the no-signature fix).
 OLD_TEMPLATE_HASH = "e9f7073d2406ba9dd74de75fe3d2225fea37ecb6efe860843a0755017431911c"
 
-NEW_TEMPLATE_PATH = (
-    Path(__file__).resolve().parent.parent.parent
-    / "assets" / "templates" / "prompts" / "followup2.j2"
-)
+ROOT = Path(__file__).resolve().parent.parent.parent
+NEW_TEMPLATE_PATH = ROOT / "assets" / "templates" / "prompts" / "followup2.j2"
+# Fallback when /app/assets is a volume that overwrites image content (Railway).
+BACKUP_TEMPLATE_PATH = ROOT / "assets_templates_backup" / "prompts" / "followup2.j2"
+
+
+def _get_template_path():
+    """Return path to followup2.j2, using backup if main path missing (volume mount)."""
+    return NEW_TEMPLATE_PATH if NEW_TEMPLATE_PATH.exists() else BACKUP_TEMPLATE_PATH
 
 
 def forwards(apps, schema_editor):
     Campaign = apps.get_model("linkedin", "Campaign")
-    new_content = NEW_TEMPLATE_PATH.read_text()
+    template_path = _get_template_path()
+    new_content = template_path.read_text()
 
     for campaign in Campaign.objects.all():
         h = hashlib.sha256(campaign.followup_template.encode()).hexdigest()
