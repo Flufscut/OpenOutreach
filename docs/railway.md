@@ -42,6 +42,10 @@ OpenOutreach can be deployed to [Railway](https://railway.app) for a managed, al
    | `DJANGO_SUPERUSER_USERNAME` | No | Admin username (creates superuser on deploy) |
    | `DJANGO_SUPERUSER_EMAIL` | No | Admin email (required if creating superuser) |
    | `DJANGO_SUPERUSER_PASSWORD` | No | Admin password (required if creating superuser) |
+   | `LINKEDIN_STORAGE_STATE_B64` | No | Base64-encoded Playwright storage state (skip login) |
+   | `LINKEDIN_STORAGE_STATE` | No | Minified JSON Playwright storage state (alternative to B64) |
+   | `LINKEDIN_COOKIES_JSON` | No | JSON array of cookies (browser extension format) |
+   | `LINKEDIN_COOKIES_B64` | No | Base64-encoded JSON array of cookies |
 
 5. **Deploy** — Railway auto-deploys on push. Add a domain for Django Admin access.
 
@@ -77,4 +81,4 @@ LinkedIn may show a verification (checkpoint) page when it detects automated log
 3. **Complete the verification** in the browser (CAPTCHA, email code, etc.).
 4. The daemon waits up to 5 minutes for you to finish; once done, it continues and saves the session.
 
-**Alternative:** Pre-authenticate locally (`make run` once, log in, then stop). Copy `assets/cookies/` to your deployment volume so the saved session is used on first Railway start.
+**Alternative — provide cookie data:** Export cookies from your browser (e.g. EditThisCookie, Cookie-Editor) as a JSON array. Set `LINKEDIN_COOKIES_JSON` in Railway with the minified JSON, or `LINKEDIN_COOKIES_B64` with the base64-encoded array. The format supports: domain, name, value, path, expirationDate, httpOnly, secure, sameSite, session. The daemon will convert to Playwright format and skip login.
