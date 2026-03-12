@@ -68,6 +68,8 @@ Before the daemon starts, `ensure_onboarding()` ensures a Campaign, active Linke
 3. **LLM config** — if missing from `.env`, prompts user for `LLM_API_KEY` (required), `AI_MODEL` (required), and `LLM_API_BASE` (optional), and writes them to `.env`.
 4. **Legal notice** — `_require_legal_acceptance()` displays GitHub URL to `LEGAL_NOTICE.md`, prompts for acceptance (y/n). Guarded by marker file at `COOKIES_DIR/.legal_notice_accepted` — only runs once.
 
+**Non-interactive mode** (Railway, CI): When `NON_INTERACTIVE=1` or `RAILWAY=1`, skips prompts and reads from env vars. Requires: `LLM_API_KEY`, `AI_MODEL`, `LEGAL_ACCEPTANCE=1`, `PRODUCT_DOCS`, `CAMPAIGN_OBJECTIVE`, `LINKEDIN_EMAIL`, `LINKEDIN_PASSWORD`. Optional: `CAMPAIGN_NAME`, `BOOKING_LINK`, `CONNECT_DAILY_LIMIT`, `CONNECT_WEEKLY_LIMIT`, `FOLLOW_UP_DAILY_LIMIT`, `SUBSCRIBE_NEWSLETTER`. See `docs/railway.md`.
+
 ### Profile State Machine
 The `enums.py:ProfileState` is a `models.TextChoices` enum whose values ARE the CRM stage names: `QUALIFIED` ("Qualified"), `READY_TO_CONNECT` ("Ready to Connect"), `PENDING` ("Pending"), `CONNECTED` ("Connected"), `COMPLETED` ("Completed"), `FAILED` ("Failed"). Pre-Deal states are implicit: a Lead with no description is "url_only" (discovered), a Lead with description is "enriched", a Lead with `disqualified=True` is disqualified. Promotion from Lead to Contact+Deal happens when qualification passes.
 

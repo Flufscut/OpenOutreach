@@ -198,6 +198,7 @@ Configure rate limits and behavior via Django Admin (LinkedInProfile + Campaign 
 - [Architecture](./docs/architecture.md)
 - [Configuration](./docs/configuration.md)
 - [Docker Installation](./docs/docker.md)
+- [Railway Deployment](./docs/railway.md)
 - [Templating](./docs/templating.md)
 - [Template Variables](./docs/template-variables.md)
 - [Testing](./docs/testing.md)
