@@ -39,6 +39,10 @@ USER ubuntu
 # Ensure assets directories exist (runs as ubuntu since COPY --chown made /app writable)
 RUN mkdir -p ${APP_HOME}/assets/data ${APP_HOME}/assets/models ${APP_HOME}/assets/cookies
 
+# Backup templates outside assets/ so they survive volume mount at /app/assets (Railway).
+# Volume overwrites /app/assets; start script restores templates into volume on first run.
+RUN cp -r ${APP_HOME}/assets/templates ${APP_HOME}/assets_templates_backup
+
 # Set the working directory
 WORKDIR ${APP_HOME}
 
