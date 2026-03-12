@@ -116,18 +116,65 @@ def launch_browser(storage_state=None):
     return page, context, browser, playwright
 
 
+def _load_cookies_via_visit(session: "AccountSession", state_file: Path) -> None:
+    """
+    Load cookies by visiting the domain first, then add_cookies.
+    Reason: Playwright may not properly apply cookies from storage_state when
+    they were exported from a different browser (e.g. EditThisCookie). Visiting
+    the domain first ensures the cookie jar is established.
+    """
+    import json
+
+    data = json.loads(state_file.read_text())
+    cookies = data.get("cookies", [])
+    if not cookies:
+        return
+
+    page = session.page
+    # Visit domain first so cookies apply correctly
+    page.goto("https://www.linkedin.com", wait_until="domcontentloaded", timeout=15_000)
+    session.wait()
+
+    # Build add_cookies format: use url for each cookie (derived from domain)
+    to_add = []
+    for c in cookies:
+        domain = c.get("domain", "").lstrip(".")
+        if not domain:
+            continue
+        url = f"https://{domain}" if not domain.startswith("http") else domain
+        to_add.append({
+            "name": c.get("name", ""),
+            "value": c.get("value", ""),
+            "url": url,
+            "expires": c.get("expires", -1),
+            "httpOnly": c.get("httpOnly", False),
+            "secure": c.get("secure", True),
+            "sameSite": c.get("sameSite", "Lax"),
+        })
+    if to_add:
+        session.context.add_cookies(to_add)
+        logger.debug("Added %d cookies after visiting domain", len(to_add))
+
+
 def start_browser_session(session: "AccountSession", handle: str):
     logger.debug("Configuring browser for @%s", handle)
     config = session.account_cfg
     state_file = Path(config["cookie_file"])
 
-    storage_state = str(state_file) if state_file.exists() else None
-    if storage_state:
+    has_cookie_file = state_file.exists()
+    if has_cookie_file:
         logger.info("Loading saved session for @%s", handle)
 
-    session.page, session.context, session.browser, session.playwright = launch_browser(storage_state=storage_state)
+    # Use add_cookies-after-visit for cookie files (more reliable than storage_state
+    # when cookies come from different browser/extension). No cookie file → no storage.
+    session.page, session.context, session.browser, session.playwright = launch_browser(
+        storage_state=None
+    )
+    if has_cookie_file:
+        # Load cookie file, visit domain, add cookies, then go to feed
+        _load_cookies_via_visit(session, state_file)
 
-    if not storage_state:
+    if not has_cookie_file:
         playwright_login(session)
         state_file.parent.mkdir(parents=True, exist_ok=True)
         session.context.storage_state(path=str(state_file))
