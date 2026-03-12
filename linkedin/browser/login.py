@@ -1,5 +1,7 @@
 # linkedin/browser/login.py
 import logging
+import time
+from urllib.parse import unquote
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -13,11 +15,72 @@ logger = logging.getLogger(__name__)
 LINKEDIN_LOGIN_URL = "https://www.linkedin.com/login"
 LINKEDIN_FEED_URL = "https://www.linkedin.com/feed/"
 
+# When LinkedIn detects automation, it redirects to a challenge/verification page.
+# We wait up to this many seconds for the user to complete it via VNC.
+CHECKPOINT_WAIT_SECONDS = 300
+
 SELECTORS = {
     "email": 'input#username',
     "password": 'input#password',
     "submit": 'button[type="submit"]',
 }
+
+
+def _wait_for_feed_after_submit(session: "AccountSession", submit_action) -> None:
+    """
+    Click submit and wait for redirect to /feed. If LinkedIn shows a checkpoint
+    (verification) page, extend wait to CHECKPOINT_WAIT_SECONDS for the user to
+    complete it via VNC.
+    """
+    page = session.page
+    submit_action()
+
+    # Initial wait for normal redirect (40s). Extended if checkpoint detected.
+    deadline = time.monotonic() + 40
+    poll_interval = 2
+    last_checkpoint_log = 0
+
+    while time.monotonic() < deadline:
+        session.wait()
+        current = unquote(page.url)
+
+        if "/feed" in current:
+            logger.debug("Navigated to %s", page.url)
+            return
+
+        if "/checkpoint/" in current:
+            # Extend deadline to allow manual completion via VNC
+            now = time.monotonic()
+            if deadline - now < CHECKPOINT_WAIT_SECONDS - 10:
+                deadline = now + CHECKPOINT_WAIT_SECONDS
+            remaining = int(deadline - now)
+            # Log at most every 60s to avoid spam
+            if now - last_checkpoint_log >= 60:
+                last_checkpoint_log = now
+                logger.warning(
+                    colored(
+                        "LinkedIn checkpoint detected. Complete verification via VNC "
+                        "(port 5900). Waiting %ds…",
+                        "yellow",
+                        attrs=["bold"],
+                    )
+                    % remaining
+                )
+            time.sleep(poll_interval)
+            continue
+
+        # Other URL (e.g. login error) – keep waiting briefly
+        time.sleep(poll_interval)
+
+    current = unquote(page.url)
+    if "/checkpoint/" in current:
+        raise RuntimeError(
+            "LinkedIn requires verification. Connect via VNC (port 5900) to complete "
+            "the challenge, or pre-authenticate locally and copy cookies to the volume."
+        )
+    raise RuntimeError(
+        f"Login failed – no redirect to feed → expected '/feed' | got '{current}'"
+    )
 
 
 def playwright_login(session: "AccountSession"):
@@ -37,12 +100,9 @@ def playwright_login(session: "AccountSession"):
     human_type(page.locator(SELECTORS["password"]), config["password"])
     session.wait()
 
-    goto_page(
+    _wait_for_feed_after_submit(
         session,
-        action=lambda: page.locator(SELECTORS["submit"]).click(),
-        expected_url_pattern="/feed",
-        timeout=40_000,
-        error_message="Login failed – no redirect to feed",
+        lambda: page.locator(SELECTORS["submit"]).click(),
     )
 
 

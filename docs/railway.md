@@ -67,3 +67,14 @@ When `PORT` is set (Railway does this automatically), the start script runs Djan
 ## VNC (Optional)
 
 To view the browser automation live, add a TCP proxy for port 5900 in the Railway dashboard. Connect any VNC client to the provided host:port.
+
+## LinkedIn Checkpoint
+
+LinkedIn may show a verification (checkpoint) page when it detects automated login from cloud IPs. When this happens:
+
+1. **Add a TCP proxy for port 5900** in Railway (Settings → Networking → Add TCP Proxy).
+2. **Connect via VNC** to the proxy host:port.
+3. **Complete the verification** in the browser (CAPTCHA, email code, etc.).
+4. The daemon waits up to 5 minutes for you to finish; once done, it continues and saves the session.
+
+**Alternative:** Pre-authenticate locally (`make run` once, log in, then stop). Copy `assets/cookies/` to your deployment volume so the saved session is used on first Railway start.
