@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from linkedin.conf import COOKIES_DIR, ENV_FILE
 
 logger = logging.getLogger(__name__)
 
 LEGAL_ACCEPTANCE_MARKER = COOKIES_DIR / ".legal_notice_accepted"
+
+
+def _is_non_interactive() -> bool:
+    """True when running in non-interactive mode (e.g. Railway, CI)."""
+    return os.getenv("NON_INTERACTIVE") == "1" or os.getenv("RAILWAY") == "1"
 
 
 def _read_multiline(prompt_msg: str) -> str:
@@ -248,12 +254,145 @@ def _require_legal_acceptance() -> None:
         print("Please type 'y' or 'n'.")
 
 
+def _create_campaign_from_env():
+    """Create Campaign from environment variables. Returns the Campaign instance."""
+    from common.models import Department
+    from linkedin.conf import DEFAULT_FOLLOWUP_TEMPLATE_PATH
+    from linkedin.management.setup_crm import DEPARTMENT_NAME, ensure_campaign_pipeline
+    from linkedin.models import Campaign
+
+    campaign_name = os.getenv("CAMPAIGN_NAME", DEPARTMENT_NAME)
+    product_docs = os.getenv("PRODUCT_DOCS", "").strip()
+    campaign_objective = os.getenv("CAMPAIGN_OBJECTIVE", "").strip()
+    booking_link = os.getenv("BOOKING_LINK", "").strip()
+
+    if not product_docs:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: PRODUCT_DOCS is required. "
+            "Set it in your environment or Railway variables."
+        )
+    if not campaign_objective:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: CAMPAIGN_OBJECTIVE is required. "
+            "Set it in your environment or Railway variables."
+        )
+
+    dept, _ = Department.objects.get_or_create(name=campaign_name)
+    ensure_campaign_pipeline(dept)
+
+    campaign = Campaign.objects.create(
+        department=dept,
+        product_docs=product_docs,
+        campaign_objective=campaign_objective,
+        followup_template=DEFAULT_FOLLOWUP_TEMPLATE_PATH.read_text(),
+        booking_link=booking_link,
+    )
+    logger.info("Created campaign from env: %s", campaign_name)
+    return campaign
+
+
+def _create_account_from_env(campaign):
+    """Create LinkedInProfile from environment variables. Returns the profile."""
+    from django.contrib.auth.models import User
+    from linkedin.models import LinkedInProfile
+
+    username = os.getenv("LINKEDIN_EMAIL", "").strip()
+    password = os.getenv("LINKEDIN_PASSWORD", "").strip()
+
+    if not username or "@" not in username:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: LINKEDIN_EMAIL (valid email) is required. "
+            "Set it in your environment or Railway variables."
+        )
+    if not password:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: LINKEDIN_PASSWORD is required. "
+            "Set it in your environment or Railway variables."
+        )
+
+    subscribe_raw = os.getenv("SUBSCRIBE_NEWSLETTER", "true").lower()
+    subscribe = subscribe_raw not in ("n", "no", "false", "0")
+    connect_daily = int(os.getenv("CONNECT_DAILY_LIMIT", "20"))
+    connect_weekly = int(os.getenv("CONNECT_WEEKLY_LIMIT", "100"))
+    follow_up_daily = int(os.getenv("FOLLOW_UP_DAILY_LIMIT", "30"))
+
+    handle = username.split("@")[0].lower().replace(".", "_").replace("+", "_")
+
+    user, created = User.objects.get_or_create(
+        username=handle,
+        defaults={"is_staff": True, "is_active": True},
+    )
+    if created:
+        user.set_unusable_password()
+        user.save()
+
+    dept = campaign.department
+    if dept not in user.groups.all():
+        user.groups.add(dept)
+
+    profile = LinkedInProfile.objects.create(
+        user=user,
+        linkedin_username=username,
+        linkedin_password=password,
+        subscribe_newsletter=subscribe,
+        connect_daily_limit=connect_daily,
+        connect_weekly_limit=connect_weekly,
+        follow_up_daily_limit=follow_up_daily,
+    )
+    logger.info("Created LinkedIn profile from env for %s (handle=%s)", username, handle)
+    return profile
+
+
+def _ensure_llm_config_non_interactive() -> None:
+    """Ensure LLM config from env; exit with error if missing."""
+    import linkedin.conf as conf
+
+    if not getattr(conf, "LLM_API_KEY", None) or not conf.LLM_API_KEY:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: LLM_API_KEY is required. "
+            "Set it in your environment or Railway variables."
+        )
+    if not getattr(conf, "AI_MODEL", None) or not conf.AI_MODEL:
+        raise SystemExit(
+            "NON_INTERACTIVE mode: AI_MODEL is required. "
+            "Set it in your environment or Railway variables."
+        )
+    logger.info("LLM config OK (from env)")
+
+
+def _require_legal_acceptance_non_interactive() -> None:
+    """Require LEGAL_ACCEPTANCE=1 in non-interactive mode."""
+    if LEGAL_ACCEPTANCE_MARKER.exists():
+        return
+    if os.getenv("LEGAL_ACCEPTANCE") != "1":
+        raise SystemExit(
+            "NON_INTERACTIVE mode: LEGAL_ACCEPTANCE=1 is required. "
+            "Read LEGAL_NOTICE.md and set LEGAL_ACCEPTANCE=1 to accept."
+        )
+    LEGAL_ACCEPTANCE_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    LEGAL_ACCEPTANCE_MARKER.touch()
+    logger.info("Legal acceptance recorded (from env)")
+
+
 def ensure_onboarding() -> None:
     """Ensure Campaign, LinkedInProfile, LLM config, and legal acceptance.
 
     If missing, runs interactive prompts to configure them.
+    In NON_INTERACTIVE or RAILWAY mode, reads from environment variables.
     """
     from linkedin.models import Campaign, LinkedInProfile
+
+    if _is_non_interactive():
+        _ensure_llm_config_non_interactive()
+        _require_legal_acceptance_non_interactive()
+
+        campaign = Campaign.objects.first()
+        if campaign is None:
+            campaign = _create_campaign_from_env()
+
+        if not LinkedInProfile.objects.filter(active=True).exists():
+            _create_account_from_env(campaign)
+        return
 
     campaign = Campaign.objects.first()
     if campaign is None:

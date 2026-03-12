@@ -24,5 +24,10 @@ x11vnc -display :99 -forever -shared -nopw &
 python manage.py migrate --no-input
 python manage.py setup_crm
 
+# If PORT is set (e.g. Railway), start Django runserver in background for CRM Admin
+if [ -n "$PORT" ]; then
+  python manage.py runserver 0.0.0.0:$PORT &
+fi
+
 # Run the daemon
 python manage.py
