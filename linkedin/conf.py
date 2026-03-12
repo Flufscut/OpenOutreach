@@ -43,6 +43,9 @@ MAX_DELAY = 8
 
 ENV_FILE = ASSETS_DIR / ".env"
 
+# Marker file: when present, daemon exits on next loop iteration (Railway restarts container).
+RESTART_REQUESTED_PATH = ASSETS_DIR / ".restart_requested"
+
 # ----------------------------------------------------------------------
 # Campaign config (timing + ML defaults — hardcoded, no YAML)
 # ----------------------------------------------------------------------

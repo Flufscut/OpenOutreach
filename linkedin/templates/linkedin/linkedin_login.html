@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Login – OpenOutreach</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            padding: 2rem;
+            background: linear-gradient(135deg, #0a1628 0%, #1a365d 100%);
+            color: #e2e8f0;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .subtitle { color: #94a3b8; margin-bottom: 1.5rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab {
+            padding: 0.5rem 1rem;
+            background: #334155;
+            border: none;
+            border-radius: 6px;
+            color: #e2e8f0;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .tab:hover { background: #475569; }
+        .tab.active { background: #2563eb; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        label { display: block; margin-top: 1rem; font-weight: 500; }
+        input[type="text"], input[type="email"], input[type="password"], textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            margin-top: 0.25rem;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: inherit;
+        }
+        textarea { min-height: 120px; font-size: 0.85rem; }
+        .hint { font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem; }
+        .checkbox { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+        .checkbox input { width: auto; }
+        button[type="submit"] {
+            margin-top: 1rem;
+            padding: 0.5rem 1.5rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button[type="submit"]:hover { background: #1d4ed8; }
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert.error { background: #7f1d1d; color: #fecaca; }
+        .alert.success { background: #14532d; color: #bbf7d0; }
+        .back { margin-bottom: 1rem; }
+        .back a { color: #94a3b8; text-decoration: none; }
+        .back a:hover { color: #e2e8f0; }
+        .no-profile { color: #fbbf24; padding: 1rem; background: #422006; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="back"><a href="/">&larr; Back to OpenOutreach</a></div>
+        <h1>LinkedIn Login</h1>
+        <p class="subtitle">Refresh expired cookies or log in when the daemon cannot authenticate.</p>
+
+        {% if not has_profile %}
+        <div class="no-profile">
+            No LinkedIn profile configured. Add one via onboarding or Django Admin.
+        </div>
+        {% else %}
+        {% if error %}
+        <div class="alert error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="alert success">{{ success }}</div>
+        {% endif %}
+
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="cookies">Paste cookies</button>
+            <button type="button" class="tab" data-tab="credentials">Email &amp; password</button>
+        </div>
+
+        <form method="post" id="form-cookies" class="panel active">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="paste_cookies">
+            <label for="email">LinkedIn email</label>
+            <input type="email" id="email" name="email" value="{{ default_email }}" required
+                   placeholder="you@example.com">
+            <label for="cookies_json">Cookies (JSON array from EditThisCookie, Cookie-Editor, etc.)</label>
+            <textarea id="cookies_json" name="cookies_json" placeholder='[{"domain": ".linkedin.com", "name": "li_at", "value": "...", ...}]'></textarea>
+            <p class="hint">Export cookies from linkedin.com in your browser, paste the JSON array here.</p>
+            <div class="checkbox">
+                <input type="checkbox" id="restart_cookies" name="restart_daemon">
+                <label for="restart_cookies" style="margin-top:0">Restart daemon to apply immediately</label>
+            </div>
+            <button type="submit">Save cookies</button>
+        </form>
+
+        <form method="post" id="form-credentials" class="panel">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="email_password">
+            <label for="email2">LinkedIn email</label>
+            <input type="email" id="email2" name="email" value="{{ default_email }}" required
+                   placeholder="you@example.com">
+            <label for="password">LinkedIn password</label>
+            <input type="password" id="password" name="password" required>
+            <p class="hint">If LinkedIn shows a verification (checkpoint) page, connect via VNC (port 5900) to complete it. The page may take up to 5 minutes.</p>
+            <div class="checkbox">
+                <input type="checkbox" id="restart_creds" name="restart_daemon">
+                <label for="restart_creds" style="margin-top:0">Restart daemon to apply immediately</label>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <script>
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const id = 'form-' + tab.dataset.tab;
+                document.getElementById(id).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

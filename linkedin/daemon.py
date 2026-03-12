@@ -9,7 +9,7 @@ import traceback
 from django.utils import timezone
 from termcolor import colored
 
-from linkedin.conf import CAMPAIGN_CONFIG, _LEGACY_MODEL_PATH, model_path_for_campaign
+from linkedin.conf import CAMPAIGN_CONFIG, RESTART_REQUESTED_PATH, _LEGACY_MODEL_PATH, model_path_for_campaign
 from linkedin.diagnostics import failure_diagnostics
 from linkedin.ml.qualifier import BayesianQualifier, KitQualifier
 from linkedin.models import Task
@@ -240,6 +240,12 @@ def run_daemon(session):
     promo = _PromoRotator(every=2)
 
     while True:
+        if RESTART_REQUESTED_PATH.exists():
+            RESTART_REQUESTED_PATH.unlink(missing_ok=True)
+            logger.info("Restart requested via LinkedIn Login UI — exiting")
+            import sys
+            sys.exit(0)
+
         task = _pop_next_task()
         if task is None:
             time.sleep(cfg["worker_poll_seconds"])

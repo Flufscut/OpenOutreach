@@ -12,6 +12,7 @@ assets/campaign/campaign_keywords.yaml
 assets/cookies/
 assets/data/
 assets/models/
+assets/.restart_requested
 /.coverage
 /assets/campaign/campaign_objective.txt
 /assets/campaign/product_docs.txt

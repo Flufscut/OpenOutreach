@@ -4,10 +4,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from linkedin.views import landing_page
+from linkedin.views import landing_page, linkedin_login
 
 urlpatterns = [
     path("", landing_page),
+    path("linkedin-login/", linkedin_login),
     path("crm/", include("crm.urls")),
     path("crm/", include("common.urls")),
     path("admin/", admin.site.urls),

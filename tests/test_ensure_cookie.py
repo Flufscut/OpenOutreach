@@ -10,17 +10,14 @@ from unittest.mock import patch
 import pytest
 
 from linkedin.conf import COOKIES_DIR
-from linkedin.management.commands.ensure_cookie_from_env import (
-    _convert_cookies_to_playwright,
-    _derive_handle,
-)
+from linkedin.cookie_utils import convert_cookies_to_playwright, derive_handle
 
 
 class TestDeriveHandle:
     def test_email_to_handle(self):
-        assert _derive_handle("peter.mcgraw@mapledx.com") == "peter_mcgraw"
-        assert _derive_handle("user+tag@example.com") == "user_tag"
-        assert _derive_handle("UPPER@test.com") == "upper"
+        assert derive_handle("peter.mcgraw@mapledx.com") == "peter_mcgraw"
+        assert derive_handle("user+tag@example.com") == "user_tag"
+        assert derive_handle("UPPER@test.com") == "upper"
 
 
 class TestConvertCookiesToPlaywright:
@@ -38,7 +35,7 @@ class TestConvertCookiesToPlaywright:
                 "sameSite": "no_restriction",
             },
         ]
-        out = _convert_cookies_to_playwright(cookies)
+        out = convert_cookies_to_playwright(cookies)
         assert "cookies" in out
         assert len(out["cookies"]) == 1
         c = out["cookies"][0]
@@ -56,13 +53,13 @@ class TestConvertCookiesToPlaywright:
         cookies = [
             {"domain": ".linkedin.com", "name": "lang", "value": "en", "session": True},
         ]
-        out = _convert_cookies_to_playwright(cookies)
+        out = convert_cookies_to_playwright(cookies)
         assert out["cookies"][0]["expires"] == -1
 
     def test_samesite_mapping(self):
         """sameSite values map correctly."""
         for raw, expected in [("no_restriction", "None"), ("lax", "Lax"), ("strict", "Strict")]:
-            out = _convert_cookies_to_playwright(
+            out = convert_cookies_to_playwright(
                 [{"domain": ".x.com", "name": "x", "value": "1", "sameSite": raw}]
             )
             assert out["cookies"][0]["sameSite"] == expected

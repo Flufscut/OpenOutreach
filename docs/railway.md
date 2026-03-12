@@ -82,3 +82,12 @@ LinkedIn may show a verification (checkpoint) page when it detects automated log
 4. The daemon waits up to 5 minutes for you to finish; once done, it continues and saves the session.
 
 **Alternative — provide cookie data:** Export cookies from your browser (e.g. EditThisCookie, Cookie-Editor) as a JSON array. Set `LINKEDIN_COOKIES_JSON` in Railway with the minified JSON, or `LINKEDIN_COOKIES_B64` with the base64-encoded array. The format supports: domain, name, value, path, expirationDate, httpOnly, secure, sameSite, session. The daemon converts to Playwright format, visits the domain first, then adds cookies (more reliable than loading via storage_state when cookies come from a different browser). **Note:** LinkedIn may still reject sessions when used from cloud IPs due to fingerprinting; if so, complete login via VNC once and the session will be saved.
+
+## LinkedIn Login Page
+
+When cookies expire, use the **LinkedIn Login** page at `https://your-app.railway.app/linkedin-login/` (staff-only) to refresh the session:
+
+1. **Paste cookies** — Export cookies from your browser (EditThisCookie, Cookie-Editor) and paste the JSON array. Optionally check "Restart daemon to apply immediately".
+2. **Email/password** — Enter credentials and click Login. The server runs Playwright to log in. If LinkedIn shows a verification (checkpoint) page, connect via VNC (port 5900) to complete it; the page waits up to 5 minutes. Optionally check "Restart daemon to apply immediately".
+
+The "Restart daemon" option causes the daemon to exit on its next loop iteration; Railway restarts the container with the new session.
