@@ -31,10 +31,14 @@ def goto_page(session: "AccountSession",
     session.wait()
 
     current = unquote(page.url)
-    if expected_url_pattern not in current:
+    parsed = urlparse(current)
+    path = parsed.path or "/"
+    # Reason: Check path, not full URL — login redirects have session_redirect=.../feed/...
+    # in query, which would falsely pass a "/feed" check on the full URL.
+    if expected_url_pattern not in path:
         if "/404" in current:
             raise SkipProfile(f"Profile returned 404 → {current}")
-        raise RuntimeError(f"{error_message} → expected '{expected_url_pattern}' | got '{current}'")
+        raise RuntimeError(f"{error_message} → expected '{expected_url_pattern}' in path | got '{current}'")
 
     logger.debug("Navigated to %s", page.url)
     urls = _extract_in_urls(session)
